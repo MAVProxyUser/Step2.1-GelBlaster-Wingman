@@ -1,0 +1,32 @@
+--- ./src/interbotix_ros_turrets/interbotix_ros_xsturrets/interbotix_xsturret_descriptions/urdf/vxxms.urdf.xacro	2023-04-02 00:00:20.482917725 -0400
++++ ./src/interbotix_descriptions/urdf/vxxms.urdf.xacro	2023-04-02 00:59:26.869512055 -0400
+@@ -69,23 +69,23 @@
+ 
+   <link name="$(arg robot_name)/top_link">
+     <visual>
+-      <origin rpy="0 0 ${pi/2}" xyz="0 0 -0.1350375"/>
++      <origin rpy="0 0 0" xyz="0 0 -0.052"/>
+       <geometry>
+-        <mesh filename="package://interbotix_descriptions/meshes/meshes_vxxms/VXT-XMS-M-3-Top.stl" scale="0.001 0.001 0.001"/>
++        <mesh filename="package://interbotix_descriptions/meshes/meshes_vxxms/CC_BYNCSA_SurgeXL_quadruped_kit.stl" scale="0.001 0.001 0.001"/>
+       </geometry>
+       <material name="interbotix_black"/>
+     </visual>
+     <collision>
+-      <origin rpy="0 0 ${pi/2}" xyz="0 0 -0.1350375"/>
++      <origin rpy="0 0 0" xyz="0 0  -0.052"/>
+       <geometry>
+-        <mesh filename="package://interbotix_descriptions/meshes/meshes_vxxms/VXT-XMS-M-3-Top.stl" scale="0.001 0.001 0.001"/>
++        <mesh filename="package://interbotix_descriptions/meshes/meshes_vxxms/CC_BYNCSA_SurgeXL_quadruped_kit.stl" scale="0.001 0.001 0.001"/>
+       </geometry>
+     </collision>
+   </link>
+ 
+   <joint name="surface" type="fixed">
+-    <axis xyz="1 0 0"/>
+-    <origin rpy="0 0 0" xyz="0 0 0.04"/>
++    <axis xyz="0 0 0"/>
++    <origin rpy="0 0 0" xyz="0 0 0"/>
+     <parent link="$(arg robot_name)/top_link"/>
+     <child link="$(arg robot_name)/surface_link"/>
+   </joint>

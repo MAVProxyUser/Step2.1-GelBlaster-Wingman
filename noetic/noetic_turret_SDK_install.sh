@@ -12,16 +12,20 @@ cp -rfv interbotix_ros_core/interbotix_ros_xseries/interbotix_xs_sdk .
 cp -rfv interbotix_ros_core/interbotix_ros_xseries/interbotix_xs_msgs .
 cp -rfv interbotix_ros_toolboxes/interbotix_xs_toolbox/interbotix_xs_modules .
 
-cp -rfv interbotix_ros_arms/interbotix_examples/interbotix_moveit_interface . 
-cp -rfv interbotix_ros_arms/interbotix_moveit . 
+cp -rfv interbotix_ros_arms/interbotix_examples/interbotix_moveit_interface .
+cp -rfv interbotix_ros_arms/interbotix_moveit .
 cp -rfv interbotix_ros_arms/interbotix_sdk .
 cp -rfv interbotix_ros_arms/interbotix_descriptions .
+wget https://github.com/MAVProxyUser/Gelblaster_Wingman/raw/main/CC_BYNCSA_STL_Files/CC_BYNCSA_SurgeXL_quadruped_kit.stl
+mv CC_BYNCSA_SurgeXL_quadruped_kit.stl interbotix_descriptions/meshes/meshes_vxxms/
 rm -rf interbotix_ros_arms
 
 
 cp interbotix_descriptions/urdf/vxxms.urdf.xacro interbotix_ros_turrets/interbotix_ros_xsturrets/interbotix_xsturret_descriptions/urdf/
 
-. /opt/ros/noetic/setup.sh 
+. /opt/ros/noetic/setup.sh
 cd ~/robotis_turret_ws/
+
 rosdep install --from-paths src --ignore-src -r -y
 catkin build
+
