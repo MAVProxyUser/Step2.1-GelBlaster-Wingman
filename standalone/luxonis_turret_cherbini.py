@@ -12,6 +12,7 @@ import numpy as np
 from pathlib import Path
 import depthai as dai
 import argparse
+from pykalman import KalmanFilter
 
 # Setup the HiWonder Servo
 servo.setConfig('/dev/ttyUSB0', 1)
@@ -72,8 +73,8 @@ class JoystickController(Node):
     def __init__(self):
         super().__init__('joystick_controller')
         self.get_logger().info('Joystick controller node started')
-        self.pan_increment = 5  # Increment in degrees for pan
-        self.tilt_increment = 5  # Increment in degrees for tilt
+        self.pan_increment = 1  # Increment in degrees for pan
+        self.tilt_increment = 1 # Increment in degrees for tilt
         self.deadzone = 0.2  # Deadzone for joystick input
         self.current_pan = home_pan  # Starting position of pan
         self.current_tilt = home_tilt  # Starting position of tilt
@@ -82,18 +83,40 @@ class JoystickController(Node):
         self.pan_last_error = 0
         self.tilt_error_integral = 0
         self.tilt_last_error = 0
-        self.pan_kp = 0.3
-        self.pan_ki = 0.000
-        self.pan_kd = 0.8
-        self.tilt_kp = 0.3 
-        self.tilt_ki = 0.000
-        self.tilt_kd = 0.8
+        self.pan_kp = 0.0
+        self.pan_ki = 0.0
+        self.pan_kd = 0
+        self.tilt_kp = 0
+        self.tilt_ki = 0.0
+        self.tilt_kd = 0
         self.axis_data = {}
         self.button_data = {}
         self.hat_data = {}
         self.pan_pub = self.create_publisher(Float64, '/pan_controller/command', 10)
         self.tilt_pub = self.create_publisher(Float64, '/tilt_controller/command', 10)
         self.joy_sub = self.create_subscription(Joy, 'joy', self.joy_callback, 10)
+
+        # Initialize the Kalman filter for pan
+        pan_transition_matrix = np.array([[1]])
+        pan_observation_matrix = np.array([[1]])
+        pan_initial_state_mean = np.array([self.current_pan])
+        pan_initial_state_covariance = np.array([[50]])
+        
+        self.pan_kalman = KalmanFilter(transition_matrices=pan_transition_matrix, observation_matrices=pan_observation_matrix, initial_state_mean=pan_initial_state_mean, initial_state_covariance=pan_initial_state_covariance)
+        
+        # Initialize the pan_kalman_covariance as a 1x1 matrix
+        self.pan_kalman_covariance = np.array([[50]])
+
+        # Initialize the Kalman filter for tilt 
+        tilt_transition_matrix = np.array([[1]])
+        tilt_observation_matrix = np.array([[1]])
+        tilt_initial_state_mean = np.array([self.current_tilt])
+        tilt_initial_state_covariance = np.array([[50]])
+        
+        self.tilt_kalman = KalmanFilter(transition_matrices=tilt_transition_matrix, observation_matrices=tilt_observation_matrix, initial_state_mean=tilt_initial_state_mean, initial_state_covariance=tilt_initial_state_covariance)
+        
+        # Initialize the pan_kalman_covariance as a 1x1 matrix
+        self.tilt_kalman_covariance = np.array([[50]])
 
     def joy_callback(self, msg):
         """Listen for joystick events"""
@@ -117,76 +140,88 @@ class JoystickController(Node):
         pan_error_derivative = pan_error - self.pan_last_error
         pan_output = self.pan_kp * pan_error + self.pan_ki * self.pan_error_integral + self.pan_kd * pan_error_derivative
         self.pan_last_error = pan_error
-    
+        
         self.current_pan += pan_output
+        self.current_pan = min(max(self.current_pan, pan_min), pan_max)  # Enforce limits
         self.pan_pub.publish(Float64(data=float(self.current_pan)))
         servo.moveServo(pan, int(self.current_pan), 1)
         time.sleep(0.01)
-    
+        
         # PID controller for tilt
         tilt_error = target_tilt - self.current_tilt
         self.tilt_error_integral += tilt_error
         tilt_error_derivative = tilt_error - self.tilt_last_error
         tilt_output = self.tilt_kp * tilt_error + self.tilt_ki * self.tilt_error_integral + self.tilt_kd * tilt_error_derivative
         self.tilt_last_error = tilt_error
-    
+        
         self.current_tilt += tilt_output
+        self.current_tilt = min(max(self.current_tilt, tilt_min), tilt_max)  # Enforce limits
         self.tilt_pub.publish(Float64(data=float(self.current_tilt)))
         servo.moveServo(tilt, int(self.current_tilt), 1)
         time.sleep(0.01)
 
+    def fire_decision(self, errorX, errorY):
+        if abs(errorX) < 30 and abs(errorY) < 30:
+            start_fire()
+            time.sleep(.25)
+            stop_fire()
+
+
     def move_servos_with_error(self, errorX, errorY):
 
-        if abs(errorX) >= 60 or abs(errorY) >= 60:
-            # Scale increments by the difference between max and min positions
-            pan_scaled_increment = (pan_max - pan_min) * (self.pan_increment / 180)
-            tilt_scaled_increment = (tilt_max - tilt_min) * (self.tilt_increment / 180)
-        
-            # Calculate target pan and tilt based on incoming error
-            target_pan = self.current_pan + (errorX * pan_scaled_increment)
-            target_tilt = self.current_tilt + (errorY * tilt_scaled_increment)
-        
-            # Ensure target positions are within limits
-            target_pan = min(max(target_pan, pan_min), pan_max)
-            target_tilt = min(max(target_tilt, tilt_min), tilt_max)
-        
-            # PID controller for pan
-            pan_error = target_pan - self.current_pan
-            self.pan_error_integral += pan_error
-            pan_error_derivative = pan_error - self.pan_last_error
-            pan_output = self.pan_kp * pan_error + self.pan_ki * self.pan_error_integral + self.pan_kd * pan_error_derivative
-            self.pan_last_error = pan_error
-        
-            self.current_pan += pan_output
-            self.pan_pub.publish(Float64(data=float(self.current_pan)))
-            servo.moveServo(pan, int(self.current_pan), 2000)
-            time.sleep(0.05)
-        
-            # PID controller for tilt
-            tilt_error = target_tilt - self.current_tilt
-            self.tilt_error_integral += tilt_error
-            tilt_error_derivative = tilt_error - self.tilt_last_error
-            tilt_output = self.tilt_kp * tilt_error + self.tilt_ki * self.tilt_error_integral + self.tilt_kd * tilt_error_derivative
-            self.tilt_last_error = tilt_error
-        
-            self.current_tilt += tilt_output
+        deadband = 4
+        if abs(errorX) < deadband and abs(errorY) < deadband:
+            return
 
-            antinutshot = 20
-            self.current_tilt += antinutshot
+        # Add these lines at the beginning of the move_servos_with_error method
+        if not hasattr(self, 'prev_errorX'):
+            self.prev_errorX = errorX
+        if not hasattr(self, 'prev_errorY'):
+            self.prev_errorY = errorY
+        
+        # Calculate the rate of change of the error
+        errorX_derivative = errorX - self.prev_errorX
+        errorY_derivative = errorY - self.prev_errorY
+        
+        # Update the previous error values
+        self.prev_errorX = errorX
+        self.prev_errorY = errorY
+    
+        # Scale increments by the difference between max and min positions
+        pan_scaling_factor = min(max(abs(errorX) / 300, 0.01), 1)
+        tilt_scaling_factor = min(max(abs(errorY) / 300, 0.01), 1)
 
-            self.tilt_pub.publish(Float64(data=float(self.current_tilt)))
-            servo.moveServo(tilt, int(self.current_tilt), 2000)
-            time.sleep(0.05)
-        
-            # Are we close?
-            if abs(errorX) < 30 and abs(errorY) < 30:
-                start_fire()
-                time.sleep(.25)
-                stop_fire()
-        
-            # Show where we're gonna go
-            print("Here's where the servos are going:")
-            print(int(self.current_pan), int(self.current_tilt))
+        pan_scaled_increment = pan_scaling_factor * (pan_max - pan_min) * (self.pan_increment / 180)
+        tilt_scaled_increment = tilt_scaling_factor * (tilt_max - tilt_min) * (self.tilt_increment / 180)
+    
+        # Add the damping factor and calculate target_pan and target_tilt
+        damping_factor = 1.5
+        target_pan = self.current_pan + (errorX * pan_scaled_increment) - (damping_factor * errorX_derivative)
+        target_tilt = self.current_tilt + (errorY * tilt_scaled_increment) - 5 - (damping_factor * errorY_derivative)
+
+    
+        # Apply Kalman Filter and update current pan and tilt positions
+        pan_filtered_state_means, _ = self.pan_kalman.filter_update(self.current_pan, self.pan_kalman_covariance)
+        self.current_pan = target_pan
+        self.current_pan = min(max(self.current_pan, pan_min), pan_max)
+    
+        tilt_filtered_state_means, _ = self.tilt_kalman.filter_update(self.current_tilt, self.tilt_kalman_covariance)
+        self.current_tilt = target_tilt
+        self.current_tilt = min(max(self.current_tilt, tilt_min), tilt_max)
+    
+        self.pan_pub.publish(Float64(data=float(self.current_pan)))
+        servo.moveServo(pan, int(self.current_pan), 5000)
+        time.sleep(0.01)
+    
+        self.tilt_pub.publish(Float64(data=float(self.current_tilt)))
+        servo.moveServo(tilt, int(self.current_tilt), 5000)
+        time.sleep(0.01)
+    
+        self.fire_decision(errorX, errorY)  # are we gonna shoot?
+    
+        # Show where we're gonna go
+        print("Here's where the servos are going:")
+        print(int(self.current_pan), int(self.current_tilt))
 
 
 #labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow", "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
@@ -220,18 +255,18 @@ camRgb.setPreviewSize(300, 300)
 camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 camRgb.setInterleaved(False)
 camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-camRgb.setFps(40)
+camRgb.setFps(30)
 
 # testing MobileNet DetectionNetwork
 detectionNetwork.setBlobPath(args.nnPath)
-detectionNetwork.setConfidenceThreshold(0.85)
+detectionNetwork.setConfidenceThreshold(0.9)
 detectionNetwork.input.setBlocking(False)
 
 objectTracker.setDetectionLabelsToTrack([15])  # track only person
+objectTracker.setMaxObjectsToTrack(1)
 # possible tracking types: ZERO_TERM_COLOR_HISTOGRAM, ZERO_TERM_IMAGELESS, SHORT_TERM_IMAGELESS, SHORT_TERM_KCF
-objectTracker.setTrackerType(dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM)
+objectTracker.setTrackerType(dai.TrackerType.SHORT_TERM_IMAGELESS)
 # take the smallest ID when new object is tracked, possible options: SMALLEST_ID, UNIQUE_ID
-#objectTracker.setTrackerIdAssignmentPolicy(dai.TrackerIdAssignmentPolicy.SMALLEST_ID)
 objectTracker.setTrackerIdAssignmentPolicy(dai.TrackerIdAssignmentPolicy.UNIQUE_ID)
 
 # Linking
@@ -249,69 +284,84 @@ objectTracker.out.link(trackerOut.input)
 
 # Connect to device and start pipeline
 def detection_process(joystick_controller):
+    last_detection_time = time.time()
+
+    xy_home = (home_pan, home_tilt)
+
     with dai.Device(pipeline) as device:
-    
+
         preview = device.getOutputQueue("preview", 4, False)
         tracklets = device.getOutputQueue("tracklets", 4, False)
-        
+
         startTime = time.monotonic()
         counter = 0
         fps = 0
         frame = None
-        
-        while(True):
+        color = (255, 0, 0)
+
+        while True:
             imgFrame = preview.get()
             track = tracklets.get()
-        
-            counter+=1
+
+            counter += 1
             current_time = time.monotonic()
-            if (current_time - startTime) > 1 :
+            if (current_time - startTime) > 1:
                 fps = counter / (current_time - startTime)
                 counter = 0
                 startTime = current_time
-        
-            color = (255, 0, 0)
+
             frame = imgFrame.getCvFrame()
             trackletsData = track.tracklets
-            for t in trackletsData:
-                roi = t.roi.denormalize(frame.shape[1], frame.shape[0])
-                x1 = int(roi.topLeft().x)
-                y1 = int(roi.topLeft().y)
-                x2 = int(roi.bottomRight().x)
-                y2 = int(roi.bottomRight().y)
-        
-                try:
-                    label = labelMap[t.label]
-                except:
-                    label = t.label
-                
-                hitX = int((x1 + x2) / 2)
-                hitY = int((y1 + y2) / 2)
+            if trackletsData:  # If there are any detections
+                last_detection_time = time.time()  # Update the last_detection_time
 
-                centerX = 150
-                centerY = 150
+                for t in trackletsData:
+                    roi = t.roi.denormalize(frame.shape[1], frame.shape[0])
+                    x1 = int(roi.topLeft().x)
+                    y1 = int(roi.topLeft().y)
+                    x2 = int(roi.bottomRight().x)
+                    y2 = int(roi.bottomRight().y)
 
-                errorX = centerX - hitX
-                errorY = centerY - hitY
+                    try:
+                        label = labelMap[t.label]
+                    except:
+                        label = t.label
 
-                joystick_controller.move_servos_with_error(errorX, errorY)
-                print("detect moving to: ")
-                print(int(hitX), int(hitY))
+                    hitX = int((x1 + x2) / 2)
+                    hitY = int((y1 + y2) / 2)
 
-                dot_radius = 4
-                dot_color = (0,255,0) #green
-                #cv2.circle(frame, (hitX, hitY), dot_radius, dot_color, -1)
-                #cv2.putText(frame, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                #cv2.putText(frame, f"ID: {[t.id]}", (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                #cv2.putText(frame, t.status.name, (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                #cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
-        
-            #cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color)
-        
-            #cv2.imshow("tracker", frame)
-        
-            #if cv2.waitKey(1) == ord('q'):
-            #    break
+                    centerX = 150
+                    centerY = 150
+
+                    errorX = centerX - hitX
+                    errorY = centerY - hitY
+
+                    joystick_controller.move_servos_with_error(errorX, errorY)
+                    print("detect moving to: ")
+                    print(int(hitX), int(hitY))
+
+                    dot_radius = 4
+                    dot_color = (0, 255, 0)  # green
+                    cv2.circle(frame, (hitX, hitY), dot_radius, dot_color, -1)
+                    cv2.putText(frame, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                    cv2.putText(frame, f"ID: {[t.id]}", (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                    cv2.putText(frame, t.status.name, (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
+
+            else:
+                # Check if more than 5 seconds have passed since the last detection
+                if time.time() - last_detection_time > 5:
+                    # Move to the home position
+                    joystick_controller.move_servos_with_error(xy_home[0] - joystick_controller.current_pan, xy_home[1] - joystick_controller.current_tilt)
+                    last_detection_time = time.time()
+
+
+            cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color)
+            cv2.imshow("tracker", frame)
+
+            if cv2.waitKey(1) == ord('q'):
+                break
+ 
 
 def main(args=None):
     rclpy.init(args=args)
