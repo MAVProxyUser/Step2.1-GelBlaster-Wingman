@@ -1,4 +1,11 @@
-sudo apt-get install ros-noetic-depthai "ros-noetic-depthai*" "ros-noetic-dynamixel*"
+sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+sudo apt install curl
+curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
+sudo apt update
+sudo apt-get install ros-noetic-depthai "ros-noetic-depthai*" "ros-noetic-dynamixel*" ros-noetic-desktop-full
+sudo apt-get install python3-catkin python3-catkin-pkg-modules python3-rosdep python3-rosdep-modules python3-catkin-tools
+sudo rosdep init
+rosdep update
 
 mkdir robotis_turret_ws/src -p
 cd robotis_turret_ws/src
@@ -16,16 +23,11 @@ cp -rfv interbotix_ros_arms/interbotix_examples/interbotix_moveit_interface .
 cp -rfv interbotix_ros_arms/interbotix_moveit .
 cp -rfv interbotix_ros_arms/interbotix_sdk .
 cp -rfv interbotix_ros_arms/interbotix_descriptions .
-wget https://github.com/MAVProxyUser/Gelblaster_Wingman/raw/main/CC_BYNCSA_STL_Files/CC_BYNCSA_SurgeXL_quadruped_kit.stl
-mv CC_BYNCSA_SurgeXL_quadruped_kit.stl interbotix_descriptions/meshes/meshes_vxxms/
 rm -rf interbotix_ros_arms
-
 
 cp interbotix_descriptions/urdf/vxxms.urdf.xacro interbotix_ros_turrets/interbotix_ros_xsturrets/interbotix_xsturret_descriptions/urdf/
 
-. /opt/ros/noetic/setup.sh
+source /opt/ros/noetic/setup.sh
 cd ~/robotis_turret_ws/
-
 rosdep install --from-paths src --ignore-src -r -y
 catkin build
-
