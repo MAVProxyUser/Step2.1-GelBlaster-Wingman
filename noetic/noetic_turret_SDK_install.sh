@@ -39,6 +39,8 @@ mv CC_BYNCSA_SurgeXL_quadruped_kit.stl src/interbotix_descriptions/meshes/meshes
 wget https://github.com/MAVProxyUser/Step2.1-GelBlaster-Wingman/raw/main/noetic/turret_STL_replace.diff
 cat turret_STL_replace.diff | patch -p0
 cp ./src/interbotix_descriptions/urdf/vxxms.urdf.xacro ./src/interbotix_ros_turrets/interbotix_ros_xsturrets/interbotix_xsturret_descriptions/urdf/vxxms.urdf.xacro
+cat ./src/interbotix_ros_xsturrets/interbotix_xsturret_gazebo/launch/xsturret_gazebo.launch | grep -v rviz_frame > ./interbotix_ros_xsturrets/interbotix_xsturret_gazebo/launch/xsturret_gazebo.launch.new
+mv ./interbotix_ros_xsturrets/interbotix_xsturret_gazebo/launch/xsturret_gazebo.launch.new ./interbotix_ros_xsturrets/interbotix_xsturret_gazebo/launch/xsturret_gazebo.launch
 
 catkin_make
 
@@ -62,3 +64,4 @@ echo "add the following entries to /etc/profile of ~/.profile :"
 echo "export LD_PRELOAD=/lib/aarch64-linux-gnu/libGLdispatch.so.0:\$LD_PRELOAD"
 echo "source /opt/ros/noetic/setup.sh"
 echo "source /home/ubuntu/robotis_turret_ws/devel/setup.sh"
+
