@@ -56,6 +56,7 @@ wget https://github.com/MAVProxyUser/Step2.1-GelBlaster-Wingman/raw/main/noetic/
 wget https://github.com/MAVProxyUser/Step2.1-GelBlaster-Wingman/raw/main/noetic/noetic_turret_SDK_install.sh
 wget https://github.com/MAVProxyUser/Step2.1-GelBlaster-Wingman/raw/main/noetic/turret_gazebo.sh
 wget https://raw.githubusercontent.com/MAVProxyUser/Step2.1-GelBlaster-Wingman/main/noetic/launch_luxonis_yolo_publisher.sh
+wget https://raw.githubusercontent.com/MAVProxyUser/Step2.1-GelBlaster-Wingman/main/noetic/launch_turret_object_tracker_with_calib.sh
 chmod +x *sh
 
 sudo cp ./src/interbotix_xs_sdk/99-interbotix-udev.rules /etc/udev/rules.d/
