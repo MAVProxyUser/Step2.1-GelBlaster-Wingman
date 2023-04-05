@@ -40,8 +40,8 @@ rosdep install --from-paths src --ignore-src -r -y
 wget https://github.com/MAVProxyUser/Step2.1-GelBlaster-Wingman/raw/main/noetic/turret_STL_replace.diff
 cat turret_STL_replace.diff | patch -p0
 cp ./src/interbotix_descriptions/urdf/vxxms.urdf.xacro ./src/interbotix_ros_turrets/interbotix_ros_xsturrets/interbotix_xsturret_descriptions/urdf/vxxms.urdf.xacro
-cat ./src/interbotix_ros_xsturrets/interbotix_xsturret_gazebo/launch/xsturret_gazebo.launch | grep -v rviz_frame > ./src/interbotix_ros_xsturrets/interbotix_xsturret_gazebo/launch/xsturret_gazebo.launch.new
-mv ./src/interbotix_ros_xsturrets/interbotix_xsturret_gazebo/launch/xsturret_gazebo.launch.new ./src/interbotix_ros_xsturrets/interbotix_xsturret_gazebo/launch/xsturret_gazebo.launch
+cat ./src/interbotix_ros_turrets/interbotix_ros_xsturrets/interbotix_xsturret_gazebo/launch/xsturret_gazebo.launch | grep -v rviz_frame > ./src/interbotix_ros_turrets/interbotix_ros_xsturrets/interbotix_xsturret_gazebo/launch/xsturret_gazebo.launch.new
+mv ./src/interbotix_ros_turrets/interbotix_ros_xsturrets/interbotix_xsturret_gazebo/launch/xsturret_gazebo.launch.new ./src/interbotix_ros_turrets/interbotix_ros_xsturrets/interbotix_xsturret_gazebo/launch/xsturret_gazebo.launch
 
 catkin_make
 
