@@ -1,3 +1,3 @@
-roslaunch interbotix_xsturret_descriptions xsturret_description.launch robot_model:=vxxms
-
+roslaunch interbotix_xsturret_descriptions xsturret_description.launch robot_model:=vxxms use_joint_pub_gui:=true use_world_frame:=true
+echo see more detail here: https://github.com/Interbotix/interbotix_ros_turrets/tree/236b8de875ebea6f7e3b1054dbe16a9794016d69/interbotix_ros_xsturrets/interbotix_xsturret_descriptions
 

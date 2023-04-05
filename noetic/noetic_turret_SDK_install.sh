@@ -17,19 +17,17 @@ git clone https://github.com/MAVProxyUser/interbotix_ros_toolboxes.git
 git clone https://github.com/ROBOTIS-GIT/dynamixel-workbench.git -b noetic-devel
 git clone https://github.com/rbonghi/ros_jetson_stats.git
 
+# maybe fix makefile paths, and remove this duplication?
 cp -rfv interbotix_ros_core/interbotix_ros_xseries/interbotix_xs_sdk .
 cp -rfv interbotix_ros_core/interbotix_ros_xseries/interbotix_xs_msgs .
 cp -rfv interbotix_ros_toolboxes/interbotix_xs_toolbox/interbotix_xs_modules .
-
 cp -rfv interbotix_ros_arms/interbotix_examples/interbotix_moveit_interface .
 cp -rfv interbotix_ros_arms/interbotix_moveit .
 cp -rfv interbotix_ros_arms/interbotix_sdk .
 cp -rfv interbotix_ros_arms/interbotix_descriptions .
 rm -rf interbotix_ros_arms
 
-
 cp interbotix_descriptions/urdf/vxxms.urdf.xacro interbotix_ros_turrets/interbotix_ros_xsturrets/interbotix_xsturret_descriptions/urdf/
-
 wget https://github.com/MAVProxyUser/Gelblaster_Wingman/raw/main/CC_BYNCSA_STL_Files/CC_BYNCSA_SurgeXL_quadruped_kit.stl
 mv CC_BYNCSA_SurgeXL_quadruped_kit.stl interbotix_descriptions/meshes/meshes_vxxms/
 
@@ -62,6 +60,10 @@ chmod +x *sh
 
 sudo cp ./src/interbotix_xs_sdk/99-interbotix-udev.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules && sudo udevadm trigger
+
+cd ~/robotis_turret_ws/src/interbotix_xs_modules
+sudo python3 setup.py install
+cd ~/robotis_turret_ws/
 
 echo "add the following entries to /etc/profile of ~/.profile :"
 echo "export LD_PRELOAD=/lib/aarch64-linux-gnu/libGLdispatch.so.0:\$LD_PRELOAD"

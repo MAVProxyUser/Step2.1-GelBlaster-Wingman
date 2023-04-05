@@ -1,2 +1,0 @@
-roslaunch interbotix_xsturret_gazebo xsturret_gazebo.launch robot_model:=pxxls
-
