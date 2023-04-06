@@ -1,10 +1,10 @@
 sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
-sudo apt-get install curl nano
-sudo apt-get install guvcview
+sudo apt-get -y install curl nano
+sudo apt-get -y install guvcview
 curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
 sudo apt update
-sudo apt-get install ros-noetic-depthai "ros-noetic-depthai*" "ros-noetic-dynamixel*" ros-noetic-desktop-full
-sudo apt-get install python3-catkin python3-catkin-pkg-modules python3-rosdep python3-rosdep-modules python3-catkin-tools
+sudo apt-get -y install ros-noetic-depthai "ros-noetic-depthai*" "ros-noetic-dynamixel*" ros-noetic-desktop-full
+sudo apt-get -y install python3-catkin python3-catkin-pkg-modules python3-rosdep python3-rosdep-modules python3-catkin-tools
 sudo rosdep init
 rosdep update
 
